@@ -62,3 +62,4 @@ if name:
         st.write("Bạn đã chọn tỉ lệ là: ",ti_le)
 #Show biểu đồ cột
         st.title(" :violet[Drawexplicitly chart]")
+#aaa
