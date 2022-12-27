@@ -1,8 +1,12 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-from time import sleep
-from sklearn import preprocessing
+from sklearn import preprocessing, tree, metrics
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from xgboost import XGBRegressor
+#from xgboost import XGBRegressor,plot_tree, plot_importance
+
 st.set_page_config(
     page_title = 'LoylP',
     page_icon = '🤘',
@@ -23,42 +27,78 @@ st.sidebar.success('# Choose ratio of train/test split', icon = "🎚")
 st.sidebar.markdown('----')
 st.sidebar.success('# Drawexplicitly chart', icon = "📊")
 st.sidebar.markdown('----')
+#callback and function
+def calc_slider():
+    st.session_state['slider'] = st.session_state['slide_input']
+
+def slider_input():
+    st.session_state['slide_input'] = st.session_state['slider']
+
+def convert(df):
+    data = df.to_numpy()
+    labelEncoder = preprocessing.LabelEncoder()
+    for ind, name_type in enumerate(df.dtypes.items()):
+        if(name_type[1] == 'object'):
+            data[:, ind] = labelEncoder.fit_transform(data[:, ind])
+    return data
+
+def getLossValues(algorithm, df, ratio):
+    data = convert(df)
+    st.write(data.shape)
+    X = data[:,:-1]
+    y = data[:,-1]
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = ratio)
+    if algorithm == 'Decision Tree Regression':
+        reg = tree.DecisionTreeRegressor(min_samples_leaf = 4, min_samples_split = 4, random_state=0)
+        reg.fit(X_train, y_train)
+    elif algorithm == 'Linear Regression':
+        reg = LinearRegression()
+        reg.fit(X_train, y_train)
+    else:
+        reg = XGBRegressor(random_state=50,learning_rate = 0.2, n_estimators = 100)
+        reg.fit(X_train, y_train)
+    MAEtrain = metrics.mean_absolute_error(reg.predict(X_train), y_train)
+    MAEtest = metrics.mean_absolute_error(reg.predict(X_test), y_test)
+    MSEtrain = metrics.mean_squared_error(reg.predict(X_train), y_train)
+    MSEtest = metrics.mean_squared_error(reg.predict(X_test), y_test)
+    lossValues = MAEtrain, MAEtest, MSEtrain, MSEtest
+    return lossValues
+        
+next1 = False
+next2 = False
 #Title
 #Tên chương trình
 st.title(' :orange[Chương trình] :green[kiểm tra] :violet[MAE và MSE]')
-if "name" not in st.session_state:
-    st.session_state["name"] = ""
-name = st.text_input('Nhập tên bạn vào đây: ', st.session_state["name"])
-if name:
-    st.write('### Chào mừng ', name, 'đến với chương trình kiểm tra MSE và MAE')
-    sleep(1)
 #Thêm file csv
-    st.title(" :red[Hãy thêm file csv vào đây]")
-    sleep(0.5)
-    uploaded_file = st.file_uploader("Choose a file")
-    if uploaded_file is not None:
-        file = pd.read_csv(uploaded_file)
-        st.write(file)
+st.title(" :red[Hãy thêm file csv vào đây]")
+uploaded_file = st.file_uploader("Choose a file csv")
+if uploaded_file:
+    df = pd.read_csv(uploaded_file)
+    st.table(df)
 #Chọn input cho bài
-        atr_not_choose = []
-        st.title(" :blue[Choose input feature]")
-        for atr in file.columns[:-1]:
-            choose = st.checkbox(str(atr), True)
-            if not choose:
-                atr_not_choose.append(atr)
-        if len(atr_not_choose) == len(file.columns[:-1]):
-            st.error('You must choose least 1 feature')
-        else:
-            file = file.drop(columns = atr_not_choose)
+    atr_choose = []
+    st.title(" :blue[Choose input feature]")
+    for atr in df.columns[:-1]:
+        choose = st.checkbox(str(atr), True)
+        if not choose:
+            atr_choose.append(atr)
+    if len(atr_choose):
+            df = df.drop(columns = atr_choose)
+    else:
+        st.error('You must choose least 1 feature')
 #Chọn thuật toán
-        st.title(" :orange[Choose Algorithm]")
-        algorithm = st.selectbox(
-            'Hãy chọn thuật toán bạn muốn',
-            ('Decision Tree Regression', 'Linear Regression', 'XGBoost'))
-        st.caption('## Bạn đã chọn ' + algorithm)
+    st.title(" :orange[Choose Algorithm]")
+    algorithm = st.selectbox(
+        'Hãy chọn thuật toán bạn muốn',
+        ('Decision Tree Regression', 'Linear Regression', 'XGBoost'))
+    st.caption('## Bạn đã chọn ' + algorithm)
 #Kéo thanh tỉ lệ
-        st.title(" :green[Choose ratio of train/test split]")
-        ti_le = st.slider('Chọn tỉ lệ', 0.0, 1.0, 0.1)
-        st.write("Bạn đã chọn tỉ lệ là: ",ti_le)
+    st.title(" :green[Choose ratio of train/test split]")
+    st.number_input("Bạn đang chọn tỉ lệ:", 0.1, 0.9, step = 0.1, key = 'slide_input', on_change = calc_slider)
+    ratio = st.slider('Chọn tỉ lệ:', 0.1, 0.9, step = 0.1, key = 'slider', on_change = slider_input)
+# get loss value
+    lossValues = getLossValues(algorithm, df, ratio)
+    st.write(lossValues)
 #Show biểu đồ cột
-        st.title(" :violet[Drawexplicitly chart]")
+    st.title(" :violet[Drawexplicitly chart]")
+    st.bar_chart(lossValues)
