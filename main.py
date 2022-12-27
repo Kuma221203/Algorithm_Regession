@@ -40,41 +40,22 @@ if name:
         file = pd.read_csv(uploaded_file)
         st.write(file)
 #Chọn input cho bài
+        atr_not_choose = []
         st.title(" :blue[Choose input feature]")
-        click1 = st.checkbox('R&D Spend')
-        click2 = st.checkbox('Administration')
-        click3 = st.checkbox('Marketing Spend')
-        click4 = st.checkbox('State')
-        del file['Profit']
-        if not click1:
-            del file['R&D Spend']
-        if not click2:
-            del file['Administration']
-        if not click3:
-            del file['Marketing Spend']
-        if not click4:
-            del file['State']
-        my_data = pd.DataFrame(file).to_numpy()
-        label_encoder = preprocessing.LabelEncoder()
-        my_data[:, -1] = label_encoder.fit_transform(my_data[:, -1])
-        st.write(my_data)
-#Chọn thuật toán
-        sleep(2)
-        st.title(" :orange[Choose Algorithm]")
-        option = st.selectbox(
-            'Hãy chọn thuật toán bạn muốn',
-            ('Choose','Decision Tree Regression', 'Linear Regression', 'XGBoost'))
-        if option == 'Decision Tree Regression':
-            sleep(0.5)
-            st.caption('## Bạn đã chọn Decision Tree Regression')
+        for atr in file.columns[:-1]:
+            choose = st.checkbox(str(atr), True)
+            if not choose:
+                atr_not_choose.append(atr)
+        if len(atr_not_choose) == len(file.columns[:-1]):
+            st.error('You must choose least 1 feature')
         else:
-            if option == 'Linear Regression':
-                sleep(0.5)
-                st.caption('## Bạn đã chọn Linear Regression')
-            else:
-                if option == 'XGBoost':
-                    sleep(0.5)
-                    st.caption('## Bạn đã chọn XGBoost')
+            file = file.drop(columns = atr_not_choose)
+#Chọn thuật toán
+        st.title(" :orange[Choose Algorithm]")
+        algorithm = st.selectbox(
+            'Hãy chọn thuật toán bạn muốn',
+            ('Decision Tree Regression', 'Linear Regression', 'XGBoost'))
+        st.caption('## Bạn đã chọn ' + algorithm)
 #Kéo thanh tỉ lệ
         st.title(" :green[Choose ratio of train/test split]")
         ti_le = st.slider('Chọn tỉ lệ', 0.0, 1.0, 0.1)
